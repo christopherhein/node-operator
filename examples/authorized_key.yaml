@@ -1,0 +1,8 @@
+apiVersion: node.io/v1
+kind: AuthorizedKey
+metadata:
+  name: christopherhein-key
+data:
+  key: ssh-rsa AAAAB3N... me@christopherhein.com
+  # TODO: implement pulling authorized keys from github api
+  # githubUsername: christopherhein
