@@ -5,8 +5,8 @@ This operator runs as a DaemonSet and configures the nodes
 happen to give them access to the cluster is to create a new `AuthorizedKey`
 manifest. 
 
-> This is only the first thing implemented in the node operator, expect that 
-> this functionality could grow.
+> This repo is for demo purposes only, I wouldn't recommend running in
+> production
 
 ## Get Started
 
