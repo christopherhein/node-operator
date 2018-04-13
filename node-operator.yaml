@@ -6,6 +6,12 @@ metadata:
   namespace: kube-system
 rules:
 - apiGroups:
+  - authorizedKeys.node.io
+  resources:
+  - "*"
+  verbs:
+  - "*"
+- apiGroups:
   - extensions
   resources:
   - thirdpartyresources
