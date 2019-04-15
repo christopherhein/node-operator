@@ -4,22 +4,19 @@
 Within the Kubernetes community, there has always been a desire to continue to
 add new features and functionality into the apiserver; you see this every day
 from the version of each primitive you use. This desire grew so much that the
-community introduced custom aggregate apiservers these allow you to build
-custom apis and run them on the master with coordination from the exposed
-apiserver, but they require you to run your own storage layer or convince your
-cluster admin to let you use the primary etcd cluster. They then created
+community introduced custom aggregate apiservers these allow you to build custom
+apis and run them on the master with coordination from the exposed apiserver,
+but they require you to run your own storage layer or convince your cluster
+admin to let you use the primary etcd cluster. The community then created
 ThirdPartyResources; these gave you the ability to create custom resources that
 were registered with the apiserver and were able to be run what CoreOS coined as
 the Operator pattern. TPRs, while great, eventually were rebuilt and moved into
-apiextensions and renamed CRDs. In this talk, we will build a CRD together using
-OperatorKit. OperatorKit allows you to create CRDs easily defined with the
-`k8s.io/code-generator` then gives you hooks to create a golang operator that
-can be packaged and deployed to your k8s cluster.
+apiextensions and called CRDs. In this talk, we will build an Operator using
+CRDs, the k8s code-generation libraries and informer libraries which are
+generated.
 
 CRDs and Operators are excellent for anything from managing some custom resource
 like public keys in an SSH authorized_key file or to help you to create easily
 deployable custom-off-the-shelf software that any cluster administrator or
 developer could deploy into their environment without having to conform to a
-predefined spec. One of the most common examples of this is the CoreOS's
-Prometheus Operator -
-link:https://github.com/coreos/prometheus-operator/[https://github.com/coreos/prometheus-operator/]
+predefined spec.
