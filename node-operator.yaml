@@ -6,22 +6,11 @@ metadata:
   namespace: default
 rules:
 - apiGroups:
-  - authorizedKeys.node.io
+  - node.chrishein.com
   resources:
   - "*"
   verbs:
   - "*"
-- apiGroups:
-  - extensions
-  resources:
-  - thirdpartyresources
-  verbs:
-  - get
-  - list
-  - watch
-  - create
-  - delete
-  - update
 - apiGroups:
   - apiextensions.k8s.io
   resources:
@@ -53,6 +42,32 @@ subjects:
   name: node-operator
   namespace: default
 
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: authorizedkeys.node.chrishein.com
+spec:
+  group: node.chrishein.com
+  names:
+    kind: AuthorizedKey
+    plural: authorizedkeys
+    shortNames:
+    - authkey
+    - sshkey
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+  scope: Cluster
+  validation:
+    openAPIV3Schema:
+      properties:
+        spec:
+          properties:
+            key:
+              type: string
+              pattern: "#ssh-rsa AAAA[0-9A-Za-z+/]+[=]{0,3} ([^@]+@[^@]+)#"
 
 ---
 apiVersion: apps/v1beta2
@@ -72,7 +87,7 @@ spec:
       serviceAccountName: node-operator
       containers:
       - name: node-operator
-        image: christopherhein/node-operator:0.0.4
+        image: christopherhein/node-operator:0.0.9
         imagePullPolicy: Always
         volumeMounts:
         - mountPath: /authorized_keys
@@ -80,5 +95,5 @@ spec:
       volumes:
       - name: authorized-keys
         hostPath:
-          path: /home/admin/.ssh/authorized_keys
+          path: /home/ec2-user/.ssh/authorized_keys
           type: File

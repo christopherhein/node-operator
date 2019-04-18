@@ -13,7 +13,7 @@ endif::[]
 This operator runs as a DaemonSet and configures the nodes
 `/.ssh/authorized_keys` file so that as employees get added all that needs to
 happen to give them access to the cluster is to create a new `AuthorizedKey`
-manifest. 
+manifest.
 
 IMPORTANT: This repo is for demo purposes only, I wouldn't recommend running in production
 
@@ -33,7 +33,7 @@ To test this create a file like this
 [source,yaml]
 ----
 # authorized_key.yml
-apiVersion: node.io/v1
+apiVersion: node.chrishein.com/v1alpha1
 kind: AuthorizedKeys
 metadata:
   name: christopherhein-key
@@ -66,9 +66,7 @@ Make sure you first have all the dependencies installed.
 
 [source,shell]
 ----
-brew install dep
-brew upgrade dep
-dep ensure
+go get ./...
 ----
 
 After you make any changes to the specs under `pkg/api/*/v1alpha1/*.go` make
@@ -76,7 +74,7 @@ sure to rerun the codegen script.
 
 [source,shell]
 ----
-./codegen.sh
+./hack/update-codegen.sh
 ----
 
 After have made sure the codegen is run you can build the container, push to a
