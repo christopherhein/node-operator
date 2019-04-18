@@ -1,100 +1,47 @@
-// Package main for the node operator
 package main
 
 import (
 	"flag"
-	"fmt"
-	log "github.com/sirupsen/logrus"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
-	nodeioclient "github.com/christopherhein/node-operator/pkg/client/clientset/versioned/typed/node/v1"
-	nodeioAuthorizedKey "github.com/christopherhein/node-operator/pkg/operator/authorizedkey"
-	opkit "github.com/christopherhein/operator-kit"
-	"k8s.io/api/core/v1"
-	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
+	ctrl "github.com/christopherhein/node-operator/controller"
+	clientset "github.com/christopherhein/node-operator/generated/clientset/versioned"
+	informers "github.com/christopherhein/node-operator/generated/informers/externalversions"
+	"github.com/christopherhein/node-operator/signals"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/klog"
 )
 
+var masterURL string
+var kubeconfig string
+
+func init() {
+	flag.StringVar(&kubeconfig, "kubeconfig", "", "Path to a kubeconfig")
+	flag.StringVar(&masterURL, "master", "", "The url of the API server.")
+}
+
 func main() {
-	log.SetOutput(os.Stdout)
-	log.SetLevel(log.DebugLevel)
+	flag.Parse()
 
-	kubeconfig := flag.String("kubeconfig", "", "Path to a kubeconfig file")
+	stopCh := signals.SetupSignalHandler()
 
-	log.Info("Getting kubernetes context")
-	context, nodeClientset, err := createContext(*kubeconfig)
+	cfg, err := clientcmd.BuildConfigFromFlags(masterURL, kubeconfig)
 	if err != nil {
-		log.Fatalf("failed to create context. %+v\n", err)
+		klog.Fatalf("error building config error=%s", err.Error())
 	}
 
-	// Create and wait for CRD resources
-	log.Info("Registering the authorized key resource")
-	resources := []opkit.CustomResource{
-		nodeioAuthorizedKey.AuthorizedKeyResource,
-	}
-	err = opkit.CreateCustomResources(*context, resources)
+	nodeClient, err := clientset.NewForConfig(cfg)
 	if err != nil {
-		log.Fatalf("failed to create custom resource. %+v\n", err)
+		klog.Fatalf("error creating node client error=%s", err.Error())
 	}
 
-	// create signals to stop watching the resources
-	signalChan := make(chan os.Signal, 1)
-	stopChan := make(chan struct{})
-	signal.Notify(signalChan, syscall.SIGINT, syscall.SIGTERM)
+	clientInformerFactory := informers.NewSharedInformerFactory(nodeClient, time.Minute*30)
 
-	// start watching the authorized key resource
-	log.Info("Watching the authorized key resource")
-	controller := nodeioAuthorizedKey.NewController(context, nodeClientset)
-	controller.StartWatch(v1.NamespaceAll, stopChan)
+	controller := ctrl.New(nodeClient, clientInformerFactory.Node().V1alpha1().AuthorizedKeys())
 
-	for {
-		select {
-		case <-signalChan:
-			log.Info("shutdown signal received, exiting...")
-			close(stopChan)
-			return
-		}
+	clientInformerFactory.Start(stopCh)
+
+	if err = controller.Run(1, stopCh); err != nil {
+		klog.Fatalf("error running controller error=%s", err.Error())
 	}
-}
-
-func getClientConfig(kubeconfig string) (*rest.Config, error) {
-	if kubeconfig != "" {
-		return clientcmd.BuildConfigFromFlags("", kubeconfig)
-	}
-	return rest.InClusterConfig()
-}
-
-func createContext(kubeconfig string) (*opkit.Context, nodeioclient.NodeV1Interface, error) {
-	config, err := getClientConfig(kubeconfig)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get k8s config. %+v", err)
-	}
-
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get k8s client. %+v", err)
-	}
-
-	apiExtClientset, err := apiextensionsclient.NewForConfig(config)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create k8s API extension clientset. %+v", err)
-	}
-
-	nodeClientset, err := nodeioclient.NewForConfig(config)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create node clientset. %+v", err)
-	}
-
-	context := &opkit.Context{
-		Clientset:             clientset,
-		APIExtensionClientset: apiExtClientset,
-		Interval:              500 * time.Millisecond,
-		Timeout:               60 * time.Second,
-	}
-	return context, nodeClientset, nil
 }
